@@ -20,10 +20,22 @@
 # For inquiries contact jan.held@uliege.be
 #
 
+from pathlib import Path
+
+import torch
 from setuptools import setup
-from torch.utils.cpp_extension import CUDAExtension, BuildExtension
-import os
-os.path.dirname(os.path.abspath(__file__))
+from torch.utils.cpp_extension import BuildExtension, CUDAExtension
+
+ROOT = Path(__file__).resolve().parent
+GLM_INCLUDE = ROOT / "third_party" / "glm"
+IS_ROCM = bool(getattr(torch.version, "hip", None))
+
+
+def _nvcc_flags():
+    flags = [f"-I{GLM_INCLUDE}"]
+    if not IS_ROCM:
+        flags.append("--use_fast_math")
+    return flags
 
 setup(
     name="diff_triangle_rasterization",
@@ -38,7 +50,7 @@ setup(
             "cuda_rasterizer/utils.cu",
             "rasterize_points.cu",
             "ext.cpp"],
-            extra_compile_args={"nvcc": ["-I" + os.path.join(os.path.dirname(os.path.abspath(__file__)), "third_party/glm/"), "--use_fast_math"]})
+            extra_compile_args={"nvcc": _nvcc_flags()})
         ],
     cmdclass={
         'build_ext': BuildExtension
